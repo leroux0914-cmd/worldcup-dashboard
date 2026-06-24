@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="W杯日程" />
+  <title>W杯2026 日程｜日本時間</title>
+  <style>
+:root{
+  --black:#111;--dark:#202020;--red:#b80000;--text:#202020;--muted:#707070;
+  --line:#d9d9d9;--paper:#fff;--soft:#f4f4f4;--japan:#fff1f1;--watch:#e9f3ff;
+  font-family:Arial,Helvetica,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+*{box-sizing:border-box}html,body{min-height:100%}
+body{margin:0;background:#f2f2f2;color:var(--text);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.app{max-width:1120px;margin:0 auto;background:#fff;min-height:100dvh}
+.top{background:var(--black);color:#fff}
+.logo{height:44px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid #333}
+.blocks{display:flex;gap:2px}.blocks span{display:grid;place-items:center;width:28px;height:28px;background:#fff;color:#111;font-weight:900;font-size:18px}
+.title{padding:14px;background:#202020}.title h1{margin:0;font-size:28px;line-height:1.05;font-weight:900;letter-spacing:-.02em}.title p{margin:8px 0 0;color:#d0d0d0;font-size:13px}
+.rule{height:4px;background:var(--red)}
+.stage-tabs{display:grid;grid-template-columns:1fr 1fr;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.stage-tab{border:0;background:#fff;padding:14px 10px;font-weight:900;font-size:15px;border-bottom:4px solid transparent}.stage-tab.active{border-bottom-color:var(--red);color:var(--red)}
+.update{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px}.update strong{font-weight:900}.refresh{border:1px solid var(--line);background:#fff;padding:7px 10px;font-weight:900}
+.hero{padding:14px;border-bottom:1px solid var(--line)}.hero-label{display:inline-block;background:var(--red);color:#fff;font-weight:900;font-size:12px;padding:5px 7px;margin-bottom:8px}
+.hero h2{margin:0;font-size:22px;line-height:1.18;font-weight:900}.hero-meta{margin:6px 0 0;color:var(--muted);font-size:13px}
+.hero-time{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-top:12px}.hero-date{font-size:13px;color:var(--muted)}.hero-clock{font-size:42px;line-height:.9;font-weight:900;letter-spacing:-.05em}
+.count{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}.countbox{background:#fff;text-align:center;padding:11px 4px}.countbox strong{display:block;font-size:24px;line-height:1;font-weight:900}.countbox span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.filters{display:flex;gap:8px;overflow:auto;padding:12px 14px;background:var(--soft);border-bottom:1px solid var(--line);scrollbar-width:none}.filters::-webkit-scrollbar{display:none}.filter{flex:0 0 auto;border:1px solid var(--line);background:#fff;padding:8px 10px;font-weight:900;font-size:13px}.filter.active{background:var(--black);color:#fff;border-color:var(--black)}
+
+.day{border-bottom:1px solid var(--line)}.day-title{margin:0;padding:10px 14px;background:#e6e6e6;font-size:15px;font-weight:900}
+.match{display:grid;grid-template-columns:74px 1fr auto;gap:12px;align-items:center;padding:12px 14px;background:#fff;border-top:1px solid var(--line)}.match.japan{background:var(--japan)}
+.time{font-size:20px;font-weight:900}.stage{font-size:12px;color:var(--red);font-weight:900;margin-bottom:5px}
+.teams{display:grid;gap:5px}.team{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:900;line-height:1.2}.flag{font-size:20px;width:26px;text-align:center}.code{color:var(--muted);font-size:12px;font-weight:800}.note{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.35}
+.badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.badge{font-size:11px;font-weight:900;background:#eee;padding:5px 6px}.badge.red{background:var(--red);color:#fff}.badge.blue{background:#dcecff;color:#165a9f}
+.empty{padding:24px 14px;color:var(--muted);font-weight:800}.footer{padding:16px 14px 28px;color:var(--muted);font-size:12px;line-height:1.55}.footer b{color:#333}
+
+.bracket-wrap{background:#fff;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 24px}
+.bracket-help{margin:0 0 12px;color:var(--muted);font-size:12px;font-weight:800}
+.bracket{display:grid;grid-template-columns:repeat(5, minmax(220px,1fr));gap:14px;min-width:1120px;align-items:start}
+.round{display:flex;flex-direction:column;gap:12px}
+.round-title{background:#e6e6e6;border-left:5px solid var(--red);padding:9px 10px;font-size:14px;font-weight:900}
+.bracket-card{position:relative;background:#fff;border:1px solid var(--line);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.bracket-card.japan{background:var(--japan)}
+.bracket-card::after{content:"";position:absolute;right:-15px;top:50%;width:15px;height:2px;background:#bdbdbd}
+.round:last-child .bracket-card::after{display:none}
+.slot{display:flex;align-items:center;gap:8px;min-height:38px;padding:8px 10px;font-size:14px;font-weight:900}
+.slot + .slot{border-top:1px solid var(--line)}
+.slot .flag{font-size:18px;width:24px}
+.slot .slot-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .code{margin-left:auto}
+.bracket-meta{border-top:1px solid var(--line);padding:7px 10px;background:#fafafa;color:var(--muted);font-size:12px;font-weight:800;line-height:1.35}
+.path-label{display:inline-block;background:var(--red);color:#fff;padding:3px 6px;font-size:11px;font-weight:900;margin-bottom:4px}
+.final-card{border:2px solid var(--red)}
+.trophy{font-size:20px;margin-right:4px}
+
+@media(max-width:640px){
+  .title h1{font-size:25px}.hero h2{font-size:20px}.hero-clock{font-size:40px}
+  .match{grid-template-columns:64px 1fr;gap:10px}.badges{grid-column:1/-1;justify-content:flex-start;margin-left:74px}
+  .bracket-wrap{padding:12px 10px 24px}
+  .bracket{min-width:1040px;grid-template-columns:repeat(5, 200px);gap:10px}
+  .round-title{font-size:13px}.slot{font-size:13px}.bracket-help{padding:0 4px}
+}
+@media(max-width:380px){.title h1{font-size:23px}.team{font-size:15px}.badges{margin-left:72px}.time{font-size:19px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="logo"><div class="blocks"><span>B</span><span>B</span><span>C</span></div><strong>SPORT</strong></div>
+    <div class="title"><h1>FIFA World Cup 2026 fixtures</h1><p>国旗付き・日本語表記・日本時間（JST）</p></div>
+    <div class="rule"></div>
+  </header>
+
+  <nav class="stage-tabs">
+    <button class="stage-tab active" data-stage="group">グループステージ</button>
+    <button class="stage-tab" data-stage="knockout">ノックアウト</button>
+  </nav>
+
+  <section class="update">
+    <div><strong id="stageName">グループステージ</strong>・最終更新 <span id="updatedAt">--:--</span></div>
+    <button class="refresh" id="refreshBtn">更新</button>
+  </section>
+
+  <section class="hero">
+    <span class="hero-label">NEXT MATCH</span>
+    <h2 id="nextTitle">読み込み中...</h2>
+    <p class="hero-meta" id="nextMeta">日本時間へ変換しています</p>
+    <div class="hero-time"><span class="hero-date" id="nextDate">--</span><strong class="hero-clock" id="nextTime">--:--</strong></div>
+  </section>
+
+  <section class="count">
+    <div class="countbox"><strong id="countDays">--</strong><span>日</span></div>
+    <div class="countbox"><strong id="countHours">--</strong><span>時間</span></div>
+    <div class="countbox"><strong id="countMinutes">--</strong><span>分</span></div>
+    <div class="countbox"><strong id="countSeconds">--</strong><span>秒</span></div>
+  </section>
+
+  <nav id="filters" class="filters"></nav>
+  <main id="content"></main>
+
+  <footer class="footer">
+    <b>Japan edition</b><br>
+    グループステージは日程表、ノックアウトは勝ち上がりトーナメント表で表示します。終了済み日程は自動非表示です。
+  </footer>
+</div>
+
+<script>
+const TEAM = {
+  "Mexico":["🇲🇽","メキシコ","MEX"],"South Africa":["🇿🇦","南アフリカ","RSA"],"South Korea":["🇰🇷","韓国","KOR"],"Czechia":["🇨🇿","チェコ","CZE"],
+  "Canada":["🇨🇦","カナダ","CAN"],"Bosnia and Herzegovina":["🇧🇦","ボスニア・ヘルツェゴビナ","BIH"],"Qatar":["🇶🇦","カタール","QAT"],"Switzerland":["🇨🇭","スイス","SUI"],
+  "Brazil":["🇧🇷","ブラジル","BRA"],"Morocco":["🇲🇦","モロッコ","MAR"],"Haiti":["🇭🇹","ハイチ","HTI"],"Scotland":["🏴󠁧󠁢󠁳󠁣󠁴󠁿","スコットランド","SCO"],
+  "United States":["🇺🇸","アメリカ","USA"],"Paraguay":["🇵🇾","パラグアイ","PAR"],"Australia":["🇦🇺","オーストラリア","AUS"],"Turkey":["🇹🇷","トルコ","TUR"],
+  "Germany":["🇩🇪","ドイツ","GER"],"Curacao":["🇨🇼","キュラソー","CUW"],"Ivory Coast":["🇨🇮","コートジボワール","CIV"],"Ecuador":["🇪🇨","エクアドル","ECU"],
+  "Netherlands":["🇳🇱","オランダ","NED"],"Japan":["🇯🇵","日本","JPN"],"Sweden":["🇸🇪","スウェーデン","SWE"],"Tunisia":["🇹🇳","チュニジア","TUN"],
+  "Belgium":["🇧🇪","ベルギー","BEL"],"Egypt":["🇪🇬","エジプト","EGY"],"Iran":["🇮🇷","イラン","IRI"],"New Zealand":["🇳🇿","ニュージーランド","NZL"],
+  "Spain":["🇪🇸","スペイン","ESP"],"Cape Verde":["🇨🇻","カーボベルデ","CPV"],"Saudi Arabia":["🇸🇦","サウジアラビア","KSA"],"Uruguay":["🇺🇾","ウルグアイ","URU"],
+  "France":["🇫🇷","フランス","FRA"],"Senegal":["🇸🇳","セネガル","SEN"],"Iraq":["🇮🇶","イラク","IRQ"],"Norway":["🇳🇴","ノルウェー","NOR"],
+  "Argentina":["🇦🇷","アルゼンチン","ARG"],"Algeria":["🇩🇿","アルジェリア","DZA"],"Austria":["🇦🇹","オーストリア","AUT"],"Jordan":["🇯🇴","ヨルダン","JOR"],
+  "Portugal":["🇵🇹","ポルトガル","POR"],"DR Congo":["🇨🇩","DRコンゴ","COD"],"Uzbekistan":["🇺🇿","ウズベキスタン","UZB"],"Colombia":["🇨🇴","コロンビア","COL"],
+  "England":["🏴󠁧󠁢󠁥󠁮󠁧󠁿","イングランド","ENG"],"Croatia":["🇭🇷","クロアチア","CRO"],"Ghana":["🇬🇭","ガーナ","GHA"],"Panama":["🇵🇦","パナマ","PAN"],
+  "TBD":["🏳️","未定","TBD"],"W32-1":["🏳️","勝者",""],"W32-2":["🏳️","勝者",""],"W16":["🏳️","勝者",""],"QF":["🏳️","勝者",""],"SF":["🏳️","勝者",""]
+};
+
+function M(date,time,stage,a,b,note,type="group",group="",path=""){
+  return {source:`${date}T${time}:00-04:00`,stage,a,b,note,type,group,path};
+}
+
+const GROUP_MATCHES = [
+  M("2026-06-24","15:00","Group B","Switzerland","Canada","グループB","group","B"),
+  M("2026-06-24","15:00","Group B","Bosnia and Herzegovina","Qatar","グループB","group","B"),
+  M("2026-06-24","18:00","Group C","Scotland","Brazil","グループC","group","C"),
+  M("2026-06-24","18:00","Group C","Morocco","Haiti","グループC","group","C"),
+  M("2026-06-24","21:00","Group A","Czechia","Mexico","グループA","group","A"),
+  M("2026-06-24","21:00","Group A","South Africa","South Korea","グループA","group","A"),
+  M("2026-06-25","16:00","Group E","Ecuador","Germany","グループE","group","E"),
+  M("2026-06-25","16:00","Group E","Curacao","Ivory Coast","グループE","group","E"),
+  M("2026-06-25","19:00","Group F","Tunisia","Netherlands","グループF","group","F"),
+  M("2026-06-25","19:00","Group F","Japan","Sweden","グループF / 日本戦","group","F"),
+  M("2026-06-25","22:00","Group D","Turkey","United States","グループD","group","D"),
+  M("2026-06-25","22:00","Group D","Paraguay","Australia","グループD","group","D"),
+  M("2026-06-26","15:00","Group I","Norway","France","グループI","group","I"),
+  M("2026-06-26","15:00","Group I","Senegal","Iraq","グループI","group","I"),
+  M("2026-06-26","20:00","Group H","Uruguay","Spain","グループH","group","H"),
+  M("2026-06-26","20:00","Group H","Cape Verde","Saudi Arabia","グループH","group","H"),
+  M("2026-06-26","23:00","Group G","New Zealand","Belgium","グループG","group","G"),
+  M("2026-06-26","23:00","Group G","Egypt","Iran","グループG","group","G"),
+  M("2026-06-27","17:00","Group L","Panama","England","グループL","group","L"),
+  M("2026-06-27","17:00","Group L","Croatia","Ghana","グループL","group","L"),
+  M("2026-06-27","19:30","Group K","Colombia","Portugal","グループK","group","K"),
+  M("2026-06-27","19:30","Group K","DR Congo","Uzbekistan","グループK","group","K"),
+  M("2026-06-27","22:00","Group J","Jordan","Argentina","グループJ","group","J"),
+  M("2026-06-27","22:00","Group J","Algeria","Austria","グループJ","group","J")
+];
+
+const KNOCKOUT_MATCHES = [
+  M("2026-06-28","15:00","ベスト32","TBD","TBD","グループA 2位 vs グループB 2位","knockout","","A"),
+  M("2026-06-29","13:00","ベスト32","TBD","TBD","グループC 1位 vs グループF 2位","knockout","","B"),
+  M("2026-06-29","16:30","ベスト32","Germany","TBD","ドイツ vs 3位枠（A/B/C/D/F）","knockout","","C"),
+  M("2026-06-29","21:00","ベスト32","TBD","TBD","グループF 1位 vs グループC 2位","knockout","","D"),
+  M("2026-06-30","13:00","ベスト32","TBD","TBD","グループE 2位 vs グループI 2位","knockout","","E"),
+  M("2026-06-30","17:00","ベスト32","TBD","TBD","グループI 1位 vs 3位枠（C/D/F/G/H）","knockout","","F"),
+  M("2026-06-30","21:00","ベスト32","Mexico","TBD","メキシコ vs 3位枠（C/E/F/H/I）","knockout","","G"),
+  M("2026-07-01","12:00","ベスト32","TBD","TBD","グループL 1位 vs 3位枠（E/H/I/J/K）","knockout","","H"),
+  M("2026-07-01","16:00","ベスト32","TBD","TBD","グループG 1位 vs 3位枠（A/E/H/I/J）","knockout","","I"),
+  M("2026-07-01","20:00","ベスト32","United States","TBD","アメリカ vs 3位枠（B/E/F/I/J）","knockout","","J"),
+  M("2026-07-02","15:00","ベスト32","TBD","TBD","グループH 1位 vs グループJ 2位","knockout","","K"),
+  M("2026-07-02","19:00","ベスト32","TBD","TBD","グループK 2位 vs グループL 2位","knockout","","L"),
+  M("2026-07-02","23:00","ベスト32","TBD","TBD","グループB 1位 vs 3位枠（E/F/G/I/J）","knockout","","M"),
+  M("2026-07-03","14:00","ベスト32","TBD","TBD","グループD 2位 vs グループG 2位","knockout","","N"),
+  M("2026-07-03","18:00","ベスト32","Argentina","TBD","アルゼンチン vs グループH 2位","knockout","","O"),
+  M("2026-07-03","21:30","ベスト32","TBD","TBD","グループK 1位 vs 3位枠（D/E/I/J/L）","knockout","","P"),
+  M("2026-07-04","13:00","ベスト16","W32-1","W32-2","A/D勝者ブロック","knockout","","R16-1"),
+  M("2026-07-04","17:00","ベスト16","W32-1","W32-2","C/F勝者ブロック","knockout","","R16-2"),
+  M("2026-07-05","16:00","ベスト16","W32-1","W32-2","B/E勝者ブロック","knockout","","R16-3"),
+  M("2026-07-05","20:00","ベスト16","W32-1","W32-2","G/H勝者ブロック","knockout","","R16-4"),
+  M("2026-07-06","15:00","ベスト16","W32-1","W32-2","I/J勝者ブロック","knockout","","R16-5"),
+  M("2026-07-06","20:00","ベスト16","W32-1","W32-2","K/L勝者ブロック","knockout","","R16-6"),
+  M("2026-07-07","12:00","ベスト16","W32-1","W32-2","M/N勝者ブロック","knockout","","R16-7"),
+  M("2026-07-07","16:00","ベスト16","W32-1","W32-2","O/P勝者ブロック","knockout","","R16-8"),
+  M("2026-07-09","16:00","準々決勝","W16","W16","準々決勝 1","knockout","","QF-1"),
+  M("2026-07-10","15:00","準々決勝","W16","W16","準々決勝 2","knockout","","QF-2"),
+  M("2026-07-11","17:00","準々決勝","W16","W16","準々決勝 3","knockout","","QF-3"),
+  M("2026-07-11","21:00","準々決勝","W16","W16","準々決勝 4","knockout","","QF-4"),
+  M("2026-07-14","15:00","準決勝","QF","QF","準決勝 1","knockout","","SF-1"),
+  M("2026-07-15","15:00","準決勝","QF","QF","準決勝 2","knockout","","SF-2"),
+  M("2026-07-18","17:00","3位決定戦","SF","SF","準決勝敗者同士","knockout","","3P"),
+  M("2026-07-19","15:00","決勝","SF","SF","優勝決定戦","knockout","","FINAL")
+];
+
+const $=s=>document.querySelector(s);
+const stageButtons=[...document.querySelectorAll(".stage-tab")];
+const filters=$("#filters"),content=$("#content"),stageName=$("#stageName");
+const nextTitle=$("#nextTitle"),nextMeta=$("#nextMeta"),nextDate=$("#nextDate"),nextTime=$("#nextTime"),updatedAt=$("#updatedAt");
+const cD=$("#countDays"),cH=$("#countHours"),cM=$("#countMinutes"),cS=$("#countSeconds");
+
+let mode="group", filter="all", next=null;
+
+function localDate(m){return new Date(m.source)}
+function displayTime(m){return new Intl.DateTimeFormat("ja-JP",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Tokyo",hourCycle:"h23"}).format(localDate(m))}
+function displayDate(m){return new Intl.DateTimeFormat("ja-JP",{month:"numeric",day:"numeric",weekday:"short",timeZone:"Asia/Tokyo"}).format(localDate(m))}
+function groupKey(m){
+  const p=new Intl.DateTimeFormat("en-CA",{year:"numeric",month:"2-digit",day:"2-digit",timeZone:"Asia/Tokyo"}).formatToParts(localDate(m));
+  return `${p.find(x=>x.type==="year").value}-${p.find(x=>x.type==="month").value}-${p.find(x=>x.type==="day").value}`;
+}
+function nowText(){return new Intl.DateTimeFormat("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"Asia/Tokyo",hourCycle:"h23"}).format(new Date())}
+function isFinished(m){return localDate(m).getTime() + 2*60*60*1000 < Date.now()}
+function all(){return (mode==="group"?GROUP_MATCHES:KNOCKOUT_MATCHES).filter(m=>!isFinished(m)).sort((a,b)=>localDate(a)-localDate(b))}
+function isJapan(m){return m.a==="Japan"||m.b==="Japan"}
+function watch(m){const h=Number(displayTime(m).split(":")[0]);return h>=7&&h<=12}
+function t(name){return TEAM[name]||["🏳️",name,""]}
+function teamHTML(name, compact=False){const [flag,ja,code]=t(name);return `<div class="team"><span class="flag">${flag}</span><span>${ja}</span><span class="code">${code}</span></div>`}
+function slotHTML(name){const [flag,ja,code]=t(name);return `<div class="slot"><span class="flag">${flag}</span><span class="slot-name">${ja}</span><span class="code">${code}</span></div>`}
+function currentMatches(){
+  let arr=all();
+  if(filter==="japan")return arr.filter(isJapan);
+  if(filter==="all")return arr;
+  if(mode==="group")return arr.filter(m=>m.group===filter);
+  return arr.filter(m=>m.stage===filter);
+}
+function renderFilters(){
+  if(mode==="knockout"){filters.innerHTML=`<button class="filter active">勝ち上がり表</button><button class="filter">横スクロールで全体表示</button>`;return}
+  const items=[{id:"all",label:"すべて"},{id:"japan",label:"日本戦"},..."ABCDEFGHIJKL".split("").map(g=>({id:g,label:`Group ${g}`}))];
+  filters.innerHTML=items.map(i=>`<button class="filter ${filter===i.id?"active":""}" data-filter="${i.id}">${i.label}</button>`).join("");
+  filters.querySelectorAll("button").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;render()});
+}
+function renderHero(){
+  const pool=currentMatches().length?currentMatches():all();
+  next=pool[0]||null;
+  if(!next){nextTitle.textContent="今後の試合はありません";nextMeta.textContent="終了済み日程は非表示です";nextDate.textContent="--";nextTime.textContent="--:--";return}
+  const [af,an]=t(next.a),[bf,bn]=t(next.b);
+  nextTitle.textContent=`${af} ${an} vs ${bf} ${bn}`;
+  nextMeta.textContent=`${next.stage} / ${next.note}`;
+  nextDate.textContent=displayDate(next);
+  nextTime.textContent=displayTime(next);
+  tick();
+}
+function tick(){
+  if(!next)return;
+  const diff=Math.max(0,localDate(next)-new Date());
+  const sec=Math.floor(diff/1000);
+  cD.textContent=String(Math.floor(sec/86400)).padStart(2,"0");
+  cH.textContent=String(Math.floor((sec%86400)/3600)).padStart(2,"0");
+  cM.textContent=String(Math.floor((sec%3600)/60)).padStart(2,"0");
+  cS.textContent=String(sec%60).padStart(2,"0");
+}
+function renderGroupList(){
+  const grouped=currentMatches().reduce((a,m)=>{(a[groupKey(m)]??=[]).push(m);return a},{});
+  const keys=Object.keys(grouped).sort();
+  content.innerHTML=keys.map(k=>{
+    const ms=grouped[k];
+    return `<section class="day"><h2 class="day-title">${displayDate(ms[0])}</h2>${ms.map(m=>`
+      <article class="match ${isJapan(m)?"japan":""}">
+        <div class="time">${displayTime(m)}</div>
+        <div>
+          <div class="stage">${m.stage}</div>
+          <div class="teams">${teamHTML(m.a)}${teamHTML(m.b)}</div>
+          <div class="note">${m.note}</div>
+        </div>
+        <div class="badges">
+          ${isJapan(m)?'<span class="badge red">日本</span>':""}
+          ${watch(m)?'<span class="badge blue">見やすい</span>':""}
+          <span class="badge">JST</span>
+        </div>
+      </article>`).join("")}</section>`
+  }).join("") || `<div class="empty">表示できる今後の試合はありません。</div>`;
+}
+function bracketCard(m, extra=""){
+  return `<article class="bracket-card ${isJapan(m)?"japan":""} ${m.stage==="決勝"?"final-card":""}">
+    ${m.stage==="決勝"?'<div class="path-label"><span class="trophy">🏆</span>FINAL</div>':""}
+    ${slotHTML(m.a)}${slotHTML(m.b)}
+    <div class="bracket-meta">${displayDate(m)} ${displayTime(m)} JST<br>${m.note}</div>
+  </article>`;
+}
+function renderBracket(){
+  const rounds=["ベスト32","ベスト16","準々決勝","準決勝","決勝"];
+  const html=rounds.map(r=>{
+    const ms=KNOCKOUT_MATCHES.filter(m=>m.stage===r && !isFinished(m));
+    return `<section class="round"><h2 class="round-title">${r}</h2>${ms.map(m=>bracketCard(m)).join("") || '<div class="empty">確定待ち</div>'}</section>`;
+  }).join("");
+  const third=KNOCKOUT_MATCHES.filter(m=>m.stage==="3位決定戦" && !isFinished(m)).map(m=>bracketCard(m)).join("");
+  content.innerHTML=`<section class="bracket-wrap">
+    <p class="bracket-help">横にスワイプすると、ベスト32から決勝までの勝ち上がりを見られます。</p>
+    <div class="bracket">${html}</div>
+    <section class="day" style="margin-top:14px"><h2 class="day-title">3位決定戦</h2>${third || '<div class="empty">確定待ち</div>'}</section>
+  </section>`;
+}
+function render(){
+  stageName.textContent=mode==="group"?"グループステージ":"ノックアウト";
+  renderFilters();renderHero();
+  if(mode==="group")renderGroupList();else renderBracket();
+  updatedAt.textContent=nowText();
+}
+stageButtons.forEach(b=>b.onclick=()=>{stageButtons.forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.stage;filter="all";render()});
+$("#refreshBtn").onclick=render;
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
+window.addEventListener("focus",render);
+window.addEventListener("online",render);
+setInterval(render,15*60*1000);
+setInterval(tick,1000);
+render();
+</script>
+</body>
+</html>
