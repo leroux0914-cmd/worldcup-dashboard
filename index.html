@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="W杯日程" />
+  <title>W杯2026 日程｜日本時間</title>
+  <style>
+:root {
+  --bbc-black:#111;
+  --bbc-dark:#1f1f1f;
+  --bbc-red:#b80000;
+  --bbc-red-2:#e00000;
+  --text:#202020;
+  --muted:#6f6f6f;
+  --line:#d8d8d8;
+  --paper:#fff;
+  --soft:#f5f5f5;
+  --soft-2:#ececec;
+  --japan:#fff2f2;
+  --watch:#eef5ff;
+  font-family: Arial, Helvetica, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:#f2f2f2;color:var(--text);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+
+.bbc-top{background:var(--bbc-black);color:#fff}
+.bbc-bar{height:44px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid #333}
+.bbc-blocks{display:flex;gap:2px}
+.bbc-blocks span{display:grid;place-items:center;width:28px;height:28px;background:#fff;color:#111;font-weight:800;font-size:18px;line-height:1}
+.bbc-titlebar{padding:14px 14px 12px;background:#202020}
+.bbc-titlebar h1{margin:0;font-size:28px;line-height:1.05;font-weight:800;letter-spacing:-.02em}
+.bbc-titlebar p{margin:8px 0 0;color:#d0d0d0;font-size:13px}
+.red-rule{height:4px;background:var(--bbc-red)}
+
+.app{max-width:1040px;margin:0 auto;background:#fff;min-height:100dvh}
+.stage-tabs{display:grid;grid-template-columns:1fr 1fr;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.stage-tab{border:0;background:#fff;padding:14px 10px;font-weight:800;font-size:15px;border-bottom:4px solid transparent}
+.stage-tab.active{border-bottom-color:var(--bbc-red);color:var(--bbc-red)}
+.update-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:#fff;border-bottom:1px solid var(--line);font-size:13px}
+.update-row strong{font-weight:800}
+.refresh{border:1px solid var(--line);background:#fff;padding:7px 10px;font-weight:800}
+
+.hero{padding:14px;background:#fff;border-bottom:1px solid var(--line)}
+.hero-label{display:inline-block;background:var(--bbc-red);color:#fff;font-weight:800;font-size:12px;padding:5px 7px;margin-bottom:8px}
+.hero h2{margin:0;font-size:22px;line-height:1.18;font-weight:800;letter-spacing:-.01em}
+.hero-meta{margin:6px 0 0;color:var(--muted);font-size:13px}
+.hero-time{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-top:12px}
+.hero-date{font-size:13px;color:var(--muted)}
+.hero-clock{font-size:42px;line-height:.9;font-weight:800;letter-spacing:-.05em}
+
+.countdown{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.countbox{background:#fff;text-align:center;padding:11px 4px}
+.countbox strong{display:block;font-size:24px;line-height:1;font-weight:800}
+.countbox span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+
+.filters{display:flex;gap:8px;overflow:auto;padding:12px 14px;background:var(--soft);border-bottom:1px solid var(--line);scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.filter{flex:0 0 auto;border:1px solid var(--line);background:#fff;padding:8px 10px;font-weight:800;font-size:13px}
+.filter.active{background:var(--bbc-black);color:#fff;border-color:var(--bbc-black)}
+
+.content{padding:0 0 22px}
+.day{border-bottom:1px solid var(--line)}
+.day-title{margin:0;padding:10px 14px;background:#e6e6e6;font-size:15px;font-weight:800}
+.match{display:grid;grid-template-columns:74px 1fr auto;gap:12px;align-items:center;padding:12px 14px;background:#fff;border-top:1px solid var(--line)}
+.match.japan{background:var(--japan)}
+.match-time{font-size:20px;font-weight:800}
+.match-main{min-width:0}
+.match-stage{font-size:12px;color:var(--bbc-red);font-weight:800;margin-bottom:4px}
+.match-teams{font-size:16px;font-weight:800;line-height:1.3}
+.match-note{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.35}
+.badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:11px;font-weight:800;background:#eee;padding:5px 6px}
+.badge.red{background:var(--bbc-red);color:#fff}
+.badge.blue{background:#dcecff;color:#165a9f}
+.footer{padding:16px 14px 28px;background:#fff;color:var(--muted);font-size:12px;line-height:1.55}
+.footer b{color:#333}
+
+@media (max-width:640px){
+  .app{min-height:100dvh}
+  .bbc-titlebar h1{font-size:25px}
+  .stage-tabs{top:0}
+  .hero h2{font-size:20px}
+  .hero-clock{font-size:40px}
+  .match{grid-template-columns:66px 1fr;gap:10px}
+  .badges{grid-column:1 / -1;justify-content:flex-start;margin-left:78px}
+}
+@media (max-width:380px){
+  .bbc-titlebar h1{font-size:23px}
+  .match-time{font-size:19px}
+  .match-teams{font-size:15px}
+  .badges{margin-left:76px}
+}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="bbc-top">
+      <div class="bbc-bar">
+        <div class="bbc-blocks" aria-label="BBC風ロゴ">
+          <span>B</span><span>B</span><span>C</span>
+        </div>
+        <strong>SPORT</strong>
+      </div>
+      <div class="bbc-titlebar">
+        <h1>FIFA World Cup 2026 fixtures</h1>
+        <p>日本語表記・日本時間（JST）に最適化</p>
+      </div>
+      <div class="red-rule"></div>
+    </header>
+
+    <nav class="stage-tabs" aria-label="ステージ切替">
+      <button class="stage-tab active" data-stage="group">グループステージ</button>
+      <button class="stage-tab" data-stage="knockout">ノックアウト</button>
+    </nav>
+
+    <section class="update-row">
+      <div><strong id="stageName">グループステージ</strong>・最終更新 <span id="updatedAt">--:--</span></div>
+      <button class="refresh" id="refreshBtn">更新</button>
+    </section>
+
+    <section class="hero" aria-label="次の注目試合">
+      <span class="hero-label">NEXT MATCH</span>
+      <h2 id="nextTitle">読み込み中...</h2>
+      <p class="hero-meta" id="nextMeta">日本時間へ変換しています</p>
+      <div class="hero-time">
+        <span class="hero-date" id="nextDate">--</span>
+        <strong class="hero-clock" id="nextTime">--:--</strong>
+      </div>
+    </section>
+
+    <section class="countdown" aria-label="次の試合まで">
+      <div class="countbox"><strong id="countDays">--</strong><span>日</span></div>
+      <div class="countbox"><strong id="countHours">--</strong><span>時間</span></div>
+      <div class="countbox"><strong id="countMinutes">--</strong><span>分</span></div>
+      <div class="countbox"><strong id="countSeconds">--</strong><span>秒</span></div>
+    </section>
+
+    <nav id="filters" class="filters" aria-label="表示フィルター"></nav>
+    <main id="content" class="content"></main>
+
+    <footer class="footer">
+      <b>Japan edition</b><br>
+      BBC風の見た目に寄せた日本時間版です。公式BBCサイトのコードや画像は使用せず、日程データを日本向けに整理しています。
+    </footer>
+  </div>
+
+<script>
+const GROUP_MATCHES = [
+  ["2026-06-11","15:00","A","メキシコ vs 南アフリカ","グループA"],
+  ["2026-06-11","22:00","A","韓国 vs チェコ","グループA"],
+  ["2026-06-12","15:00","B","カナダ vs ボスニア・ヘルツェゴビナ","グループB"],
+  ["2026-06-12","21:00","D","アメリカ vs パラグアイ","グループD"],
+  ["2026-06-13","15:00","B","カタール vs スイス","グループB"],
+  ["2026-06-13","18:00","C","ブラジル vs モロッコ","グループC"],
+  ["2026-06-13","21:00","C","ハイチ vs スコットランド","グループC"],
+  ["2026-06-14","00:00","D","オーストラリア vs トルコ","グループD"],
+  ["2026-06-14","13:00","E","ドイツ vs キュラソー","グループE"],
+  ["2026-06-14","16:00","F","オランダ vs 日本","グループF / 日本戦"],
+  ["2026-06-14","19:00","E","コートジボワール vs エクアドル","グループE"],
+  ["2026-06-14","22:00","F","スウェーデン vs チュニジア","グループF"],
+  ["2026-06-15","12:00","H","スペイン vs カーボベルデ","グループH"],
+  ["2026-06-15","15:00","G","ベルギー vs エジプト","グループG"],
+  ["2026-06-15","18:00","H","サウジアラビア vs ウルグアイ","グループH"],
+  ["2026-06-15","21:00","G","イラン vs ニュージーランド","グループG"],
+  ["2026-06-16","15:00","I","フランス vs セネガル","グループI"],
+  ["2026-06-16","18:00","I","イラク vs ノルウェー","グループI"],
+  ["2026-06-16","21:00","J","アルゼンチン vs アルジェリア","グループJ"],
+  ["2026-06-17","00:00","J","オーストリア vs ヨルダン","グループJ"],
+  ["2026-06-17","13:00","K","ポルトガル vs DRコンゴ","グループK"],
+  ["2026-06-17","16:00","L","イングランド vs クロアチア","グループL"],
+  ["2026-06-17","19:00","L","ガーナ vs パナマ","グループL"],
+  ["2026-06-17","22:00","K","ウズベキスタン vs コロンビア","グループK"],
+  ["2026-06-18","12:00","A","チェコ vs 南アフリカ","グループA"],
+  ["2026-06-18","15:00","B","スイス vs ボスニア・ヘルツェゴビナ","グループB"],
+  ["2026-06-18","18:00","B","カナダ vs カタール","グループB"],
+  ["2026-06-18","21:00","A","メキシコ vs 韓国","グループA"],
+  ["2026-06-19","15:00","D","アメリカ vs オーストラリア","グループD"],
+  ["2026-06-19","18:00","C","スコットランド vs モロッコ","グループC"],
+  ["2026-06-19","20:30","C","ブラジル vs ハイチ","グループC"],
+  ["2026-06-19","23:00","D","トルコ vs パラグアイ","グループD"],
+  ["2026-06-20","13:00","F","オランダ vs スウェーデン","グループF"],
+  ["2026-06-20","16:00","E","ドイツ vs コートジボワール","グループE"],
+  ["2026-06-20","20:00","E","エクアドル vs キュラソー","グループE"],
+  ["2026-06-21","00:00","F","チュニジア vs 日本","グループF / 日本戦"],
+  ["2026-06-21","12:00","H","スペイン vs サウジアラビア","グループH"],
+  ["2026-06-21","15:00","G","ベルギー vs イラン","グループG"],
+  ["2026-06-21","18:00","H","ウルグアイ vs カーボベルデ","グループH"],
+  ["2026-06-21","21:00","G","ニュージーランド vs エジプト","グループG"],
+  ["2026-06-22","13:00","J","アルゼンチン vs オーストリア","グループJ"],
+  ["2026-06-22","17:00","I","フランス vs イラク","グループI"],
+  ["2026-06-22","20:00","I","ノルウェー vs セネガル","グループI"],
+  ["2026-06-22","23:00","J","ヨルダン vs アルジェリア","グループJ"],
+  ["2026-06-23","13:00","K","ポルトガル vs ウズベキスタン","グループK"],
+  ["2026-06-23","16:00","L","イングランド vs ガーナ","グループL"],
+  ["2026-06-23","19:00","L","パナマ vs クロアチア","グループL"],
+  ["2026-06-23","22:00","K","コロンビア vs DRコンゴ","グループK"],
+  ["2026-06-24","15:00","B","スイス vs カナダ","グループB"],
+  ["2026-06-24","15:00","B","ボスニア・ヘルツェゴビナ vs カタール","グループB"],
+  ["2026-06-24","18:00","C","スコットランド vs ブラジル","グループC"],
+  ["2026-06-24","18:00","C","モロッコ vs ハイチ","グループC"],
+  ["2026-06-24","21:00","A","チェコ vs メキシコ","グループA"],
+  ["2026-06-24","21:00","A","南アフリカ vs 韓国","グループA"],
+  ["2026-06-25","16:00","E","エクアドル vs ドイツ","グループE"],
+  ["2026-06-25","16:00","E","キュラソー vs コートジボワール","グループE"],
+  ["2026-06-25","19:00","F","チュニジア vs オランダ","グループF"],
+  ["2026-06-25","19:00","F","日本 vs スウェーデン","グループF / 日本戦"],
+  ["2026-06-25","22:00","D","トルコ vs アメリカ","グループD"],
+  ["2026-06-25","22:00","D","パラグアイ vs オーストラリア","グループD"],
+  ["2026-06-26","15:00","I","ノルウェー vs フランス","グループI"],
+  ["2026-06-26","15:00","I","セネガル vs イラク","グループI"],
+  ["2026-06-26","20:00","H","ウルグアイ vs スペイン","グループH"],
+  ["2026-06-26","20:00","H","カーボベルデ vs サウジアラビア","グループH"],
+  ["2026-06-26","23:00","G","ニュージーランド vs ベルギー","グループG"],
+  ["2026-06-26","23:00","G","エジプト vs イラン","グループG"],
+  ["2026-06-27","17:00","L","パナマ vs イングランド","グループL"],
+  ["2026-06-27","17:00","L","クロアチア vs ガーナ","グループL"],
+  ["2026-06-27","19:30","K","コロンビア vs ポルトガル","グループK"],
+  ["2026-06-27","19:30","K","DRコンゴ vs ウズベキスタン","グループK"],
+  ["2026-06-27","22:00","J","ヨルダン vs アルゼンチン","グループJ"],
+  ["2026-06-27","22:00","J","アルジェリア vs オーストリア","グループJ"]
+].map(([date,time,group,title,note])=>({date,time,group,stage:`グループ${group}`,title,note,type:"group"}));
+
+const KNOCKOUT_MATCHES = [
+  ["2026-06-29","04:00","ベスト32","グループA 2位 vs グループB 2位"],
+  ["2026-06-30","02:00","ベスト32","グループC 1位 vs グループF 2位"],
+  ["2026-06-30","05:30","ベスト32","ドイツ vs 3位枠（A/B/C/D/F）"],
+  ["2026-06-30","10:00","ベスト32","グループF 1位 vs グループC 2位"],
+  ["2026-07-01","02:00","ベスト32","グループE 2位 vs グループI 2位"],
+  ["2026-07-01","06:00","ベスト32","グループI 1位 vs 3位枠（C/D/F/G/H）"],
+  ["2026-07-01","10:00","ベスト32","メキシコ vs 3位枠（C/E/F/H/I）"],
+  ["2026-07-02","01:00","ベスト32","グループL 1位 vs 3位枠（E/H/I/J/K）"],
+  ["2026-07-02","05:00","ベスト32","グループG 1位 vs 3位枠（A/E/H/I/J）"],
+  ["2026-07-02","09:00","ベスト32","アメリカ vs 3位枠（B/E/F/I/J）"],
+  ["2026-07-03","04:00","ベスト32","グループH 1位 vs グループJ 2位"],
+  ["2026-07-03","08:00","ベスト32","グループK 2位 vs グループL 2位"],
+  ["2026-07-03","12:00","ベスト32","グループB 1位 vs 3位枠（E/F/G/I/J）"],
+  ["2026-07-04","03:00","ベスト32","グループD 2位 vs グループG 2位"],
+  ["2026-07-04","07:00","ベスト32","アルゼンチン vs グループH 2位"],
+  ["2026-07-04","10:30","ベスト32","グループK 1位 vs 3位枠（D/E/I/J/L）"],
+  ["2026-07-05","02:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-05","06:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-06","05:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-06","09:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-07","04:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-07","09:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-08","01:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-08","05:00","ベスト16","ベスト32勝者同士"],
+  ["2026-07-10","05:00","準々決勝","準々決勝 1"],
+  ["2026-07-11","04:00","準々決勝","準々決勝 2"],
+  ["2026-07-12","06:00","準々決勝","準々決勝 3"],
+  ["2026-07-12","10:00","準々決勝","準々決勝 4"],
+  ["2026-07-15","04:00","準決勝","準決勝 1"],
+  ["2026-07-16","04:00","準決勝","準決勝 2"],
+  ["2026-07-19","06:00","3位決定戦","3位決定戦"],
+  ["2026-07-20","04:00","決勝","決勝"]
+].map(([date,time,stage,title])=>({date,time,stage,title,note:"日本時間",type:"knockout"}));
+
+const $=s=>document.querySelector(s);
+const stageButtons=[...document.querySelectorAll(".stage-tab")];
+const filters=$("#filters"),content=$("#content"),stageName=$("#stageName");
+const nextTitle=$("#nextTitle"),nextMeta=$("#nextMeta"),nextDate=$("#nextDate"),nextTime=$("#nextTime");
+const updatedAt=$("#updatedAt");
+const cD=$("#countDays"),cH=$("#countHours"),cM=$("#countMinutes"),cS=$("#countSeconds");
+
+let mode="group", filter="all", next=null;
+
+function dateOf(m){return new Date(`${m.date}T${m.time}:00+09:00`)}
+function jpDate(d){
+  return new Intl.DateTimeFormat("ja-JP",{month:"numeric",day:"numeric",weekday:"short",timeZone:"Asia/Tokyo"}).format(new Date(`${d}T00:00:00+09:00`));
+}
+function jpTime(){return new Intl.DateTimeFormat("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"Asia/Tokyo"}).format(new Date())}
+function all(){return mode==="group"?GROUP_MATCHES:KNOCKOUT_MATCHES}
+function isJapan(m){return /日本|Japan|JPN/.test(m.title+" "+m.note)}
+function watch(m){const h=Number(m.time.split(":")[0]);return h>=7&&h<=12}
+function currentMatches(){
+  let arr=all();
+  if(filter==="japan") return arr.filter(isJapan);
+  if(filter==="all") return arr;
+  if(mode==="group") return arr.filter(m=>m.group===filter);
+  return arr.filter(m=>m.stage===filter);
+}
+function renderFilters(){
+  const items=mode==="group"
+    ? [{id:"all",label:"すべて"},{id:"japan",label:"日本戦"},..."ABCDEFGHIJKL".split("").map(g=>({id:g,label:`Group ${g}`}))]
+    : [{id:"all",label:"すべて"},..."ベスト32,ベスト16,準々決勝,準決勝,決勝".split(",").map(x=>({id:x,label:x}))];
+  filters.innerHTML=items.map(i=>`<button class="filter ${filter===i.id?"active":""}" data-filter="${i.id}">${i.label}</button>`).join("");
+  filters.querySelectorAll("button").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;render()});
+}
+function renderHero(){
+  const now=new Date();
+  const pool=currentMatches().length?currentMatches():all();
+  next=pool.map(m=>({...m,dt:dateOf(m)})).filter(m=>m.dt>=now).sort((a,b)=>a.dt-b.dt)[0] || pool[pool.length-1];
+  if(!next){nextTitle.textContent="試合がありません";return}
+  nextTitle.textContent=next.title;
+  nextMeta.textContent=`${next.stage} / ${next.note}`;
+  nextDate.textContent=jpDate(next.date);
+  nextTime.textContent=next.time;
+  tick();
+}
+function tick(){
+  if(!next)return;
+  const diff=Math.max(0,dateOf(next)-new Date());
+  const sec=Math.floor(diff/1000);
+  cD.textContent=String(Math.floor(sec/86400)).padStart(2,"0");
+  cH.textContent=String(Math.floor((sec%86400)/3600)).padStart(2,"0");
+  cM.textContent=String(Math.floor((sec%3600)/60)).padStart(2,"0");
+  cS.textContent=String(sec%60).padStart(2,"0");
+}
+function renderList(){
+  const grouped=currentMatches().reduce((a,m)=>{(a[m.date]??=[]).push(m);return a},{});
+  content.innerHTML=Object.entries(grouped).map(([date,ms])=>`
+    <section class="day">
+      <h2 class="day-title">${jpDate(date)}</h2>
+      ${ms.map(m=>`
+        <article class="match ${isJapan(m)?"japan":""}">
+          <div class="match-time">${m.time}</div>
+          <div class="match-main">
+            <div class="match-stage">${m.stage}</div>
+            <div class="match-teams">${m.title}</div>
+            <div class="match-note">${m.note}</div>
+          </div>
+          <div class="badges">
+            ${isJapan(m)?'<span class="badge red">日本</span>':""}
+            ${watch(m)?'<span class="badge blue">見やすい</span>':""}
+            <span class="badge">JST</span>
+          </div>
+        </article>`).join("")}
+    </section>`).join("") || `<section class="day"><h2 class="day-title">該当なし</h2></section>`;
+}
+function render(){
+  stageName.textContent=mode==="group"?"グループステージ":"ノックアウト";
+  renderFilters();
+  renderHero();
+  renderList();
+  updatedAt.textContent=jpTime();
+}
+stageButtons.forEach(b=>b.onclick=()=>{
+  stageButtons.forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  mode=b.dataset.stage;
+  filter="all";
+  render();
+});
+$("#refreshBtn").onclick=render;
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
+window.addEventListener("focus",render);
+window.addEventListener("online",render);
+setInterval(render,15*60*1000);
+setInterval(tick,1000);
+render();
+</script>
+</body>
+</html>
