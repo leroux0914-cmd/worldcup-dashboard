@@ -35,7 +35,7 @@ button{font:inherit;color:inherit}
 .rule{height:4px;background:var(--red)}
 
 .stage-tabs{display:grid;grid-template-columns:1fr 1fr;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
-.stage-tab{border:0;background:#fff;padding:14px 10px;font-weight:900;font-size:15px;border-bottom:4px solid transparent;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.stage-tab{border:0;background:#fff;padding:14px 10px;font-weight:900;font-size:15px;border-bottom:4px solid transparent}
 .stage-tab.active{border-bottom-color:var(--red);color:var(--red)}
 .update{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px}
 .update strong{font-weight:900}
@@ -52,7 +52,7 @@ button{font:inherit;color:inherit}
 
 .filters{display:flex;gap:8px;overflow:auto;padding:12px 14px;background:var(--soft);border-bottom:1px solid var(--line);scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
-.filter{flex:0 0 auto;border:1px solid var(--line);background:#fff;padding:8px 10px;font-weight:900;font-size:13px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.filter{flex:0 0 auto;border:1px solid var(--line);background:#fff;padding:8px 10px;font-weight:900;font-size:13px}
 .filter.active{background:var(--black);color:#fff;border-color:var(--black)}
 
 .day{border-bottom:1px solid var(--line)}
@@ -524,8 +524,6 @@ function seedCompletedGroupResults(){
     match.scoreA=scoreA;
     match.scoreB=scoreB;
     match.status="FT";
-    match.__dataPriority=MATCH_UPDATE_PRIORITY.seed;
-    match.__dataSource="seed";
     match.logicalId=`GROUP-${group}-PAST-${i}`;
     match.seed=i;
     GROUP_MATCHES.push(match);
@@ -589,56 +587,12 @@ const API_CONFIG = {
   ]
 };
 let apiBusy=false;
-let apiInFlightPromise=null;
-let dashboardUpdatePromise=null;
-let dashboardUpdateQueued=false;
 let apiLastSuccess="";
 let apiLastError="";
-let initialDashboardHydrated=false;
-let initialDashboardHydrating=false;
-let lastUserNavigationAt=0;
-let lastAutoRenderAt=0;
 let thirdPlaceTableBusy=false;
 let thirdPlaceTableReady=false;
 let thirdPlaceTableSource="local-fallback";
 let thirdPlaceAllocationTable={};
-const MATCH_UPDATE_PRIORITY={fixedBackup:10, seed:20, api:50, confirmed:100};
-function matchStatusLevel(data){
-  const st=String(data&&data.status||"").toUpperCase();
-  const final=/FT|FINAL|FULL_TIME|COMPLETE|COMPLETED|AET/.test(st) || (/(^|[^A-Z])PEN([^A-Z]|$)|PENALTIES|PK/.test(st) && Number.isFinite(data&&data.scoreA) && Number.isFinite(data&&data.scoreB));
-  const live=!final && (!!(data&&data.live) || /LIVE|IN_PROGRESS|HALFTIME|^HT$|^ET$/.test(st));
-  return final ? 3 : live ? 2 : 1;
-}
-function hasFiniteScorePair(data){
-  return !!data && Number.isFinite(data.scoreA) && Number.isFinite(data.scoreB);
-}
-function updatePriority(data){
-  return Number.isFinite(Number(data&&data.__priority)) ? Number(data.__priority) : 0;
-}
-function shouldAcceptMatchUpdate(target,data){
-  if(!target || !data) return false;
-  if(data.__force) return true;
-  const incomingPriority=updatePriority(data);
-  const currentPriority=Number.isFinite(Number(target.__dataPriority)) ? Number(target.__dataPriority) : 0;
-  const incomingFinal=matchStatusLevel(data)===3 && hasFiniteScorePair(data);
-  const currentFinal=matchStatusLevel(target)===3 && hasFiniteScorePair(target);
-  const incomingScore=hasFiniteScorePair(data);
-  const currentScore=hasFiniteScorePair(target);
-
-  // Never let a scheduled/live/stale response erase or roll back a completed result.
-  if(currentFinal && !incomingFinal) return false;
-
-  // Lower-priority fixed backups cannot overwrite newer API/confirmed data.
-  if(currentScore && incomingPriority < currentPriority) return false;
-
-  // If two sources disagree about a final score, keep the higher-priority one.
-  if(currentFinal && incomingFinal && incomingPriority < currentPriority) return false;
-
-  // A scoreless item should not replace a scored item; it can only help identify a blank fixture.
-  if(currentScore && !incomingScore && incomingPriority <= currentPriority) return false;
-
-  return true;
-}
 
 function ymdInTZ(offsetDays=0){
   const base=new Date(Date.now()+offsetDays*86400000);
@@ -652,7 +606,7 @@ function apiEndpoints(){
 }
 
 // APIが一時的に遅い/弾かれる時でも、直近の確定結果を画面に入れるための安全弁。
-// v106: これは固定バックアップ扱い。最新API/より新しい確定結果を上書きしません。
+// API取得に成功した場合はAPI結果が優先されます。
 const CONFIRMED_RESULT_PATCHES=[
   // 2026-06-24 completed matches. These patches keep the dashboard correct when
   // Safari/API cache returns stale scheduled/live data for simultaneous final kickoffs.
@@ -681,7 +635,7 @@ function applyConfirmedResultPatches(){
     if(!target) return;
     const reversed=sameTeam(target.a,patch.b)&&sameTeam(target.b,patch.a);
     const data=reversed ? {...patch,a:target.a,b:target.b,scoreA:patch.scoreB,scoreB:patch.scoreA} : patch;
-    setMatchScore(target,{...data,__priority:MATCH_UPDATE_PRIORITY.fixedBackup,__source:"fixed-backup"});
+    setMatchScore(target,data);
     if(patch.id){
       target.apiId=String(patch.id);
       target.logicalId=target.logicalId||String(patch.id);
@@ -836,26 +790,17 @@ function slotHTML(name, score="", state=""){
   const [flag,ja,code]=t(name);
   return `<div class="slot ${state}"><span class="flag">${flag}</span><span class="slot-name">${ja}</span><span class="score">${score!==""?score:"–"}</span><span class="code">${code}</span></div>`
 }
-function statusPills(m, opts={}){
+function statusPills(m){
   const pills=[];
   const st=String(m.status||"").toUpperCase();
-  const finished=matchStatusLevel(m)===3 || (Number.isFinite(m.scoreA) && Number.isFinite(m.scoreB) && (isFinished(m) || !!m.winner));
-  const pkDone=!!m.pk || /PEN|PK/.test(st);
-
-  // Finished knockout cards must never keep stale LIVE badges. In compact bracket mode,
-  // FT/PK are folded into the meta line so the card height does not overlap the next fixture.
-  if(finished){
-    if(opts.compactFinished) return "";
-    pills.push(`<span class="state-pill">FT</span>`);
-    if(pkDone) pills.push(`<span class="state-pill extra">PK</span>`);
-    return `<div class="match-state">${pills.join("")}</div>`;
-  }
-
   if(m.live || st==="LIVE" || st==="IN_PROGRESS") pills.push(`<span class="state-pill live">LIVE</span>`);
-  if(st==="HALFTIME" || st==="HT") pills.push(`<span class="state-pill live">HT</span>`);
+  if(st==="HALFTIME") pills.push(`<span class="state-pill live">HT</span>`);
   if(st==="ET") pills.push(`<span class="state-pill extra">ET</span>`);
-  if(st==="PEN") pills.push(`<span class="state-pill extra">PK</span>`);
+  if(st==="AET") pills.push(`<span class="state-pill extra">AET</span>`);
+  if(st==="PEN") pills.push(`<span class="state-pill extra">PEN</span>`);
   if(m.aet && !pills.some(p=>p.includes('AET')||p.includes('ET'))) pills.push(`<span class="state-pill extra">延長</span>`);
+  if(m.pk) pills.push(`<span class="state-pill extra">PK</span>`);
+  if(st==="FINAL" || st==="FT" || st==="FULL_TIME" || st==="COMPLETE" || st==="COMPLETED") pills.push(`<span class="state-pill">FT</span>`);
   return pills.length?`<div class="match-state">${pills.join("")}</div>`:"";
 }
 function scoreFor(m, side){
@@ -884,39 +829,11 @@ function loserOf(m){
 }
 
 function setMatchScore(target, data){
-  if(!target || !data) return false;
-  if(!shouldAcceptMatchUpdate(target,data)) return false;
-  const incomingFinal=matchStatusLevel(data)===3;
+  if(!target || !data) return;
   ["a","b","scoreA","scoreB","pkA","pkB","status","live","aet","pk","winner"].forEach(k=>{
     if(data[k]!==undefined && data[k]!==null && data[k]!=="") target[k]=data[k];
   });
-  if(incomingFinal){
-    target.live=false;
-    if(!target.status || !/FT|FINAL|FULL_TIME|COMPLETE|COMPLETED|AET|PEN|PK/.test(String(target.status).toUpperCase())) target.status=target.pk ? "PEN" : "FT";
-  }
-  const priority=updatePriority(data);
-  if(priority){
-    target.__dataPriority=priority;
-    target.__dataSource=data.__source||target.__dataSource||"unknown";
-  }
-  target.__dataAppliedAt=Date.now();
-  return true;
 }
-
-function normalizeMatchVisualState(m){
-  if(!m) return m;
-  const finished=matchStatusLevel(m)===3 || (Number.isFinite(m.scoreA) && Number.isFinite(m.scoreB) && (isFinished(m) || !!m.winner));
-  if(finished){
-    m.live=false;
-    const st=String(m.status||"").toUpperCase();
-    if(!/FT|FINAL|FULL_TIME|COMPLETE|COMPLETED|AET|PEN|PK/.test(st)) m.status=m.pk ? "PEN" : "FT";
-  }
-  return m;
-}
-function normalizeAllMatchVisualStates(){
-  [...groupDataSource(),...knockoutDataSource()].forEach(normalizeMatchVisualState);
-}
-
 function teamNameFromApi(v){
   if(!v) return "";
   const raw=String(v.displayName||v.name||v.shortDisplayName||v.team||v.abbreviation||v).trim();
@@ -971,8 +888,8 @@ function normalizeOneMatch(m){
     const away=comps.find(c=>c.homeAway==="away")||comps[1]||{};
     const st=(m.status&&m.status.type)||{};
     const statusName=String(st.name||st.state||"").toUpperCase();
-    const completed=!!st.completed || statusName.includes("FINAL") || statusName.includes("STATUS_FINAL") || statusName.includes("FULL_TIME") || statusName.includes("COMPLETE");
-    const live=!completed && (statusName.includes("IN")||statusName.includes("LIVE")||st.state==="in");
+    const live=statusName.includes("IN")||statusName.includes("LIVE")||st.state==="in";
+    const completed=!!st.completed || statusName.includes("FINAL") || statusName.includes("STATUS_FINAL");
     return {
       id:String(m.id||""),
       a:teamNameFromApi(away.team||away),
@@ -1019,9 +936,9 @@ function applyApiMatches(items){
     if(!target) return;
     const reversed=sameTeam(target.a,item.b)&&sameTeam(target.b,item.a);
     if(reversed){
-      setMatchScore(target,{...item,a:target.a,b:target.b,scoreA:item.scoreB,scoreB:item.scoreA,pkA:item.pkB,pkB:item.pkA,__priority:MATCH_UPDATE_PRIORITY.api,__source:"api"});
+      setMatchScore(target,{...item,a:target.a,b:target.b,scoreA:item.scoreB,scoreB:item.scoreA,pkA:item.pkB,pkB:item.pkA});
     }else{
-      setMatchScore(target,{...item,__priority:MATCH_UPDATE_PRIORITY.api,__source:"api"});
+      setMatchScore(target,item);
     }
     if(id){
       target.apiId=id;
@@ -1029,63 +946,46 @@ function applyApiMatches(items){
     }
   });
 }
-function cacheBustUrl(url){
-  try{
-    const u=new URL(url, window.location.href);
-    u.searchParams.set("_wc_cache_bust", String(Date.now()));
-    return u.toString();
-  }catch(e){
-    const sep=String(url).includes("?")?"&":"?";
-    return `${url}${sep}_wc_cache_bust=${Date.now()}`;
-  }
-}
 async function refreshApiData({silent=false}={}){
-  if(!API_CONFIG.enabled) return false;
-  if(apiInFlightPromise) return apiInFlightPromise;
+  if(!API_CONFIG.enabled || apiBusy) return false;
   apiBusy=true;
-  apiInFlightPromise=(async()=>{
-    let mergedItems=[];
-    let successfulEndpoints=0;
-    try{
-      const endpoints=apiEndpoints();
-      const batches=await Promise.allSettled(endpoints.map(async(url)=>{
+  let mergedItems=[];
+  let successfulEndpoints=0;
+  try{
+    for(const url of apiEndpoints()){
+      try{
         const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
         const timeout = controller ? setTimeout(()=>controller.abort(), 4500) : null;
-        try{
-          const res=await fetch(cacheBustUrl(url),{cache:"no-store", signal:controller ? controller.signal : undefined});
-          if(!res.ok) return [];
-          return normalizeApiPayload(await res.json());
-        }finally{
-          if(timeout) clearTimeout(timeout);
-        }
-      }));
-      batches.forEach(result=>{
-        if(result.status==="fulfilled" && result.value && result.value.length){
+        const res=await fetch(url,{cache:"no-store", signal:controller ? controller.signal : undefined});
+        if(timeout) clearTimeout(timeout);
+        if(!res.ok) continue;
+        const payload=await res.json();
+        const items=normalizeApiPayload(payload);
+        if(items.length){
           successfulEndpoints++;
-          mergedItems=mergedItems.concat(result.value);
+          mergedItems=mergedItems.concat(items);
         }
-      });
-      if(mergedItems.length){
-        applyApiMatches(mergedItems);
-        // Fixed backups are applied only where they do not roll back newer API data.
-        applyConfirmedResultPatches();
-        runDataIntegrityAudit();
-        apiLastSuccess=nowText();
-        apiLastError="";
-        if(!silent) render();
-        return true;
-      }
-      apiLastError="最新データ取得に失敗しました。直近の確定結果バックアップを表示しています。";
+      }catch(e){}
+    }
+    if(mergedItems.length){
+      applyApiMatches(mergedItems);
+      // Always apply confirmed patches after API intake. This prevents stale API/cache
+      // responses from overwriting matches that are already officially complete.
       applyConfirmedResultPatches();
       runDataIntegrityAudit();
+      apiLastSuccess=nowText();
+      apiLastError="";
       if(!silent) render();
-      return false;
-    }finally{
-      apiBusy=false;
-      apiInFlightPromise=null;
+      return true;
     }
-  })();
-  return apiInFlightPromise;
+  }finally{
+    apiBusy=false;
+  }
+  apiLastError="最新データ取得に失敗しました。直近の確定結果バックアップを表示しています。";
+  applyConfirmedResultPatches();
+  runDataIntegrityAudit();
+  if(!silent) render();
+  return false;
 }
 
 function buildStandings(group){
@@ -1139,38 +1039,17 @@ function currentMatches(){
   if(mode==="knockout") return all();
   return matchesForCurrentGroupView();
 }
-function handleFilterSelect(nextFilter){
-  lastUserNavigationAt=Date.now();
-  filter=nextFilter;
-  saveTabState();
-  render();
-}
-function bindFilterButtons(){
-  filters.querySelectorAll("button").forEach(b=>{
-    b.type="button";
-    b.addEventListener("click",ev=>{
-      ev.preventDefault();
-      ev.stopPropagation();
-      handleFilterSelect(b.dataset.filter);
-    },{passive:false});
-    b.addEventListener("touchend",ev=>{
-      ev.preventDefault();
-      ev.stopPropagation();
-      handleFilterSelect(b.dataset.filter);
-    },{passive:false});
-  });
-}
 function renderFilters(){
   if(mode==="knockout"){
     if(filter!=="schedule") filter="bracket";
     const items=[{id:"bracket",label:"トーナメント"},{id:"schedule",label:"試合日時順"}];
     filters.innerHTML=items.map(i=>`<button class="filter ${filter===i.id?"active":""}" data-filter="${i.id}">${i.label}</button>`).join("");
-    bindFilterButtons();
+    filters.querySelectorAll("button").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;saveTabState();render()});
     return;
   }
   const items=[{id:"all",label:"すべて"},{id:"japan",label:"日本戦"},...GROUP_LETTERS.map(g=>({id:g,label:g})),{id:"third",label:"3rd"}];
   filters.innerHTML=items.map(i=>`<button class="filter ${filter===i.id?"active":""}" data-filter="${i.id}">${i.label}</button>`).join("");
-  bindFilterButtons();
+  filters.querySelectorAll("button").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;saveTabState();render()});
 }
 function renderHero(){
   const view=currentMatches();
@@ -1315,7 +1194,7 @@ function bracketCard(m, x, y, cls=""){
   return `<article class="bracket-card ${isJapan(m)?"japan":""} ${m.stage==="決勝"?"final-card":""} ${cls}" style="left:${x}px;top:${y}px">
     ${finalLabel}
     ${slotHTML(m.a, scoreFor(m,"a"), aState)}${slotHTML(m.b, scoreFor(m,"b"), bState)}
-    ${statusPills(m,{compactFinished:true})}
+    ${statusPills(m)}
     <div class="bracket-meta">${displayDate(m)} ${displayTime(m)} JST${pkText}<br>${m.note}</div>
   </article>`;
 }
@@ -1381,7 +1260,7 @@ async function loadOfficialThirdPlaceTable(){
       try{
         const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
         const timeout = controller ? setTimeout(()=>controller.abort(), 5000) : null;
-        const res=await fetch(cacheBustUrl(url),{cache:"no-store", signal:controller ? controller.signal : undefined});
+        const res=await fetch(url,{cache:"no-store", signal:controller ? controller.signal : undefined});
         if(timeout) clearTimeout(timeout);
         if(!res.ok) continue;
         const type=(res.headers.get("content-type")||"").toLowerCase();
@@ -1552,12 +1431,10 @@ function syncRoundOf32Teams(){
   const r32=KNOCKOUT_MATCHES.filter(m=>m.stage==="ベスト32").sort((a,b)=>a.seed-b.seed);
   r32.forEach((m,i)=>{
     if(!resolved[i]) return;
-    if(!hasScore(m) || !hasRealKnockoutTeams(m)){
-      m.a=resolved[i].a;
-      m.b=resolved[i].b;
-      m.qualifiedA=!!resolved[i].qualifiedA;
-      m.qualifiedB=!!resolved[i].qualifiedB;
-    }
+    m.a=resolved[i].a;
+    m.b=resolved[i].b;
+    m.qualifiedA=!!resolved[i].qualifiedA;
+    m.qualifiedB=!!resolved[i].qualifiedB;
   });
 }
 function syncKnockoutProgression(){
@@ -1602,7 +1479,6 @@ function buildUnifiedDashboardModel(){
   buildThirdPlaceRanking();
   thirdAssignmentMap();
   syncKnockoutProgression();
-  normalizeAllMatchVisualStates();
 }
 function enrichKnockout(){
   syncRoundOf32Teams();
@@ -1633,11 +1509,6 @@ function enrichKnockout(){
     byStage.third[0].b=loserOf(byStage.sf[1])||"敗者 SF-02";
   }
   return byStage;
-}
-
-function renderKnockoutHydrationGuard(){
-  content.dataset.rendered='1';
-  content.innerHTML=`<section class="knockout-loading">最新データ確認中です。古いRound of 32は表示せず、確認後にトーナメントを描画します。</section>`;
 }
 function renderBracket(){
   const data=enrichKnockout();
@@ -1710,101 +1581,34 @@ function render(){
   stageName.textContent=mode==="group"?"グループステージ":"ノックアウト";
   renderFilters();
   renderHero();
-  if(mode==="knockout" && filter==="bracket" && !initialDashboardHydrated){
-    renderKnockoutHydrationGuard();
-  }else if(mode==="group")renderGroupList();else if(filter==="schedule")renderGroupList();else renderBracket();
+  if(mode==="group")renderGroupList();else if(filter==="schedule")renderGroupList();else renderBracket();
   updatedAt.textContent=apiLastSuccess ? `${nowText()} / API ${apiLastSuccess}` : nowText();
 }
-function handleStageTabSelect(nextMode){
-  if(!["group","knockout"].includes(nextMode)) return;
-  lastUserNavigationAt=Date.now();
-  mode=nextMode;
+stageButtons.forEach(b=>b.onclick=()=>{
+  mode=b.dataset.stage;
   filter=mode==="knockout"?"bracket":"all";
   saveTabState();
   render();
-}
-
-// v110: iPad/Safari tap guard. Bind tab/filter switching at the document level
-// in the capture phase so hydration/loading guards or scroll containers cannot swallow taps.
-let lastDirectNavigationKey="";
-let lastDirectNavigationAt=0;
-function runDirectNavigationOnce(key, fn){
-  const now=Date.now();
-  if(key===lastDirectNavigationKey && now-lastDirectNavigationAt<320) return;
-  lastDirectNavigationKey=key;
-  lastDirectNavigationAt=now;
-  fn();
-}
-function bindDirectNavigationTapGuard(){
-  const handler=ev=>{
-    const target=ev.target && ev.target.closest ? ev.target.closest(".stage-tab,.filter") : null;
-    if(!target) return;
-    const stage=target.dataset.stage;
-    const nextFilter=target.dataset.filter;
-    if(stage){
-      ev.preventDefault();
-      ev.stopPropagation();
-      runDirectNavigationOnce(`stage:${stage}`,()=>handleStageTabSelect(stage));
-      return;
-    }
-    if(nextFilter){
-      ev.preventDefault();
-      ev.stopPropagation();
-      runDirectNavigationOnce(`filter:${nextFilter}`,()=>handleFilterSelect(nextFilter));
-    }
-  };
-  ["pointerup","touchend","click"].forEach(type=>{
-    document.addEventListener(type,handler,{capture:true,passive:false});
-  });
-}
-bindDirectNavigationTapGuard();
-stageButtons.forEach(b=>{
-  b.type="button";
-  b.addEventListener("click",ev=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-    handleStageTabSelect(b.dataset.stage);
-  },{passive:false});
-  b.addEventListener("touchend",ev=>{
-    ev.preventDefault();
-    ev.stopPropagation();
-    handleStageTabSelect(b.dataset.stage);
-  },{passive:false});
 });
 $("#refreshBtn").onclick=()=>{try{updateDashboardFromUnifiedSource({silent:false})}catch(e){window.__dashboardSafeMessage&&window.__dashboardSafeMessage(e)}};
 async function updateDashboardFromUnifiedSource({silent=false}={}){
   // Single source of truth. Every refresh runs the same order so 3rd Place Ranking
-  // and the knockout bracket cannot drift apart. Multiple triggers are queued into
-  // one latest update to avoid Safari focus/visibility/interval collisions.
-  if(dashboardUpdatePromise){
-    dashboardUpdateQueued=true;
-    return dashboardUpdatePromise;
+  // and the knockout bracket cannot drift apart.
+  await refreshApiData({silent:true});
+  applyConfirmedResultPatches();
+  await loadOfficialThirdPlaceTable();
+  buildUnifiedDashboardModel();
+  if(!silent || true){
+    try{ render(); }catch(e){ window.__dashboardSafeMessage && window.__dashboardSafeMessage(e); }
   }
-  dashboardUpdatePromise=(async()=>{
-    initialDashboardHydrating=true;
-    try{
-      do{
-        dashboardUpdateQueued=false;
-        await refreshApiData({silent:true});
-        applyConfirmedResultPatches();
-        await loadOfficialThirdPlaceTable();
-        buildUnifiedDashboardModel();
-      }while(dashboardUpdateQueued);
-      initialDashboardHydrated=true;
-      lastAutoRenderAt=Date.now();
-      try{ render(); }catch(e){ window.__dashboardSafeMessage && window.__dashboardSafeMessage(e); }
-      return true;
-    }finally{
-      initialDashboardHydrating=false;
-      dashboardUpdatePromise=null;
-    }
-  })();
-  return dashboardUpdatePromise;
+  return true;
 }
 function refreshAndRender(){
-  updateDashboardFromUnifiedSource({silent:true}).catch(e=>{
+  try{
+    updateDashboardFromUnifiedSource({silent:true});
+  }catch(e){
     try{render()}catch(err){window.__dashboardSafeMessage&&window.__dashboardSafeMessage(err)}
-  });
+  }
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshAndRender();});
 window.addEventListener("focus",refreshAndRender);
