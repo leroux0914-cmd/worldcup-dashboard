@@ -35,7 +35,7 @@ button{font:inherit;color:inherit}
 .rule{height:4px;background:var(--red)}
 
 .stage-tabs{display:grid;grid-template-columns:1fr 1fr;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
-.stage-tab{border:0;background:#fff;padding:14px 10px;font-weight:900;font-size:15px;border-bottom:4px solid transparent}
+.stage-tab{border:0;background:#fff;padding:14px 10px;font-weight:900;font-size:15px;border-bottom:4px solid transparent;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .stage-tab.active{border-bottom-color:var(--red);color:var(--red)}
 .update{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px}
 .update strong{font-weight:900}
@@ -52,7 +52,7 @@ button{font:inherit;color:inherit}
 
 .filters{display:flex;gap:8px;overflow:auto;padding:12px 14px;background:var(--soft);border-bottom:1px solid var(--line);scrollbar-width:none}
 .filters::-webkit-scrollbar{display:none}
-.filter{flex:0 0 auto;border:1px solid var(--line);background:#fff;padding:8px 10px;font-weight:900;font-size:13px}
+.filter{flex:0 0 auto;border:1px solid var(--line);background:#fff;padding:8px 10px;font-weight:900;font-size:13px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .filter.active{background:var(--black);color:#fff;border-color:var(--black)}
 
 .day{border-bottom:1px solid var(--line)}
@@ -1723,6 +1723,41 @@ function handleStageTabSelect(nextMode){
   saveTabState();
   render();
 }
+
+// v110: iPad/Safari tap guard. Bind tab/filter switching at the document level
+// in the capture phase so hydration/loading guards or scroll containers cannot swallow taps.
+let lastDirectNavigationKey="";
+let lastDirectNavigationAt=0;
+function runDirectNavigationOnce(key, fn){
+  const now=Date.now();
+  if(key===lastDirectNavigationKey && now-lastDirectNavigationAt<320) return;
+  lastDirectNavigationKey=key;
+  lastDirectNavigationAt=now;
+  fn();
+}
+function bindDirectNavigationTapGuard(){
+  const handler=ev=>{
+    const target=ev.target && ev.target.closest ? ev.target.closest(".stage-tab,.filter") : null;
+    if(!target) return;
+    const stage=target.dataset.stage;
+    const nextFilter=target.dataset.filter;
+    if(stage){
+      ev.preventDefault();
+      ev.stopPropagation();
+      runDirectNavigationOnce(`stage:${stage}`,()=>handleStageTabSelect(stage));
+      return;
+    }
+    if(nextFilter){
+      ev.preventDefault();
+      ev.stopPropagation();
+      runDirectNavigationOnce(`filter:${nextFilter}`,()=>handleFilterSelect(nextFilter));
+    }
+  };
+  ["pointerup","touchend","click"].forEach(type=>{
+    document.addEventListener(type,handler,{capture:true,passive:false});
+  });
+}
+bindDirectNavigationTapGuard();
 stageButtons.forEach(b=>{
   b.type="button";
   b.addEventListener("click",ev=>{
